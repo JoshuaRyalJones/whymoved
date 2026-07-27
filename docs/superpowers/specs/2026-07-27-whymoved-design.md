@@ -109,8 +109,8 @@ z_i(t)  = ε_i(t) / σ_i
 | Condition | Label |
 |---|---|
 | `\|z\| ≥ 2.0` | `idiosyncratic` — eligible for explanation |
-| `\|z\| < 2.0`, market component dominant | `moved_with_market` |
-| `\|z\| < 2.0`, small move | `normal_noise` |
+| `\|z\| < 2.0` and `\|β_i × r_m(t)\| ≥ \|ε_i(t)\|` | `moved_with_market` |
+| `\|z\| < 2.0` and `\|β_i × r_m(t)\| < \|ε_i(t)\|` | `normal_noise` |
 
 The 2.0 threshold is configurable and its effect on flag rate is a tracked metric.
 
