@@ -1,65 +1,62 @@
-import Image from "next/image";
+import Link from 'next/link'
+import { GateStrip } from '~/components/GateStrip'
+import { runDemoPipeline } from '~/lib/demo/run'
 
-export default function Home() {
+export default async function HomePage() {
+  const result = await runDemoPipeline()
+  const marks = result.holdings.map((h) => ({
+    ticker: h.ticker,
+    zScore: h.classification.zScore,
+  }))
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
-  );
+    <main className="mx-auto max-w-3xl px-6 py-20">
+      <p className="eyebrow">Portfolio attribution</p>
+
+      <h1 className="mt-5 max-w-[15ch] font-display text-[clamp(2.75rem,8vw,4.25rem)] leading-[1.03] tracking-[-0.02em]">
+        Most days, there is no story.
+      </h1>
+
+      <p className="mt-8 max-w-[54ch] text-[1.0625rem] leading-relaxed text-ink-muted">
+        Ask a language model why a stock dropped two percent and it will always tell you something.
+        It will sound reasonable. It will usually be invented, because most daily moves are market
+        beta and ordinary variance, not news.
+      </p>
+
+      <figure className="mt-16">
+        <GateStrip holdings={marks} />
+        <figcaption className="mt-5 max-w-[52ch] text-sm leading-relaxed text-ink-muted">
+          Every holding in the demo portfolio, plotted by how far it moved beyond what its market
+          exposure explains. Five sit inside the threshold and are labelled by arithmetic alone. One
+          crossed it, and only that one was sent to a model.
+        </figcaption>
+      </figure>
+
+      <div className="mt-16 border-t border-rule-strong pt-8">
+        <p className="max-w-[54ch] font-display text-xl leading-[1.5]">
+          Attribution is computed before any AI is involved. Each holding&rsquo;s return is split
+          into a market component and an idiosyncratic residual, and a model is consulted only when
+          that residual exceeds two standard deviations of the holding&rsquo;s own typical movement.
+        </p>
+
+        <p className="mt-6 max-w-[54ch] text-[1.0625rem] leading-relaxed text-ink-muted">
+          When a model is consulted, it must ground its answer in retrieved articles and cite them.
+          Every citation is verified against the retrieved set in code before it can be displayed —
+          not by prompting, but by a membership check. A fabricated citation cannot reach this page.
+        </p>
+      </div>
+
+      <div className="mt-12 flex flex-wrap items-center gap-x-8 gap-y-4">
+        <Link
+          href="/demo"
+          className="font-display text-lg underline decoration-rule-strong decoration-1 underline-offset-[6px] transition-colors hover:decoration-ink"
+        >
+          See the worked example
+        </Link>
+        <Link href="/methodology" className="eyebrow transition-colors hover:text-ink">
+          Read the methodology
+        </Link>
+      </div>
+    </main>
+  )
 }

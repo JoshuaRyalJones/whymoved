@@ -1,26 +1,96 @@
 @import "tailwindcss";
 
+/*
+  "The Ledger" — a quiet, measured sheet where the only ornament is the
+  evidence itself. Paper is a cool bone rather than a warm cream; gain and
+  loss are printed-ink green and brick rather than dashboard neon; and one
+  saturated colour, ultramarine, is reserved exclusively for a holding that
+  crossed the significance gate. If ultramarine appears, something happened.
+*/
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --paper: #f4f5f2;
+  --paper-raised: #fbfbf9;
+  --ink: #17191b;
+  --ink-muted: #6e7370;
+  --ink-faint: #9aa09b;
+  --rule: #dcdfd9;
+  --rule-strong: #c3c7bf;
+  --gain: #14614c;
+  --loss: #8e2b26;
+  --flag: #2e3f91;
+  --flag-wash: #e7e9f5;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --paper: #14161a;
+    --paper-raised: #1a1d21;
+    --ink: #e8eae6;
+    --ink-muted: #8b918c;
+    --ink-faint: #676c68;
+    --rule: #2a2e30;
+    --rule-strong: #3c4144;
+    --gain: #4fb89a;
+    --loss: #d9736c;
+    --flag: #93a2ee;
+    --flag-wash: #1e2440;
   }
 }
 
+@theme inline {
+  --color-paper: var(--paper);
+  --color-paper-raised: var(--paper-raised);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-faint: var(--ink-faint);
+  --color-rule: var(--rule);
+  --color-rule-strong: var(--rule-strong);
+  --color-gain: var(--gain);
+  --color-loss: var(--loss);
+  --color-flag: var(--flag);
+  --color-flag-wash: var(--flag-wash);
+
+  --font-display: var(--font-newsreader);
+  --font-sans: var(--font-plex-sans);
+  --font-mono: var(--font-plex-mono);
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
+  font-feature-settings: "tnum" 1;
+}
+
+/* Figures in a financial table must align vertically or the column is
+   unreadable. Every numeric face is locked to tabular, lining figures. */
+.tnum {
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* The eyebrow: small, letterspaced, uppercase. Used to label a region
+   without competing with the display face for attention. */
+.eyebrow {
+  font-family: var(--font-plex-mono), ui-monospace, monospace;
+  font-size: 0.6875rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+a:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--flag);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

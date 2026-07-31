@@ -85,15 +85,20 @@ const PRICES: Record<string, DailyPrice[]> = {
   CAN: canPrices,
 }
 
-function makeDeps(overrides: Partial<Parameters<typeof runDailyPipeline>[0]> = {}) {
-  return {
+type Deps = Parameters<typeof runDailyPipeline>[0]
+
+// The spread of `overrides` widens each mock to its bare call signature, which
+// loses `.mock`. Casting back to the base shape keeps the mock surface typed
+// while still allowing a plain override.
+function makeDeps(overrides: Partial<Deps> = {}) {
+  const base = {
     date: '2026-07-21',
     holdings,
     fetchPrices: vi.fn(async (ticker: string) => PRICES[ticker] ?? []),
-    fetchNews: vi.fn(async () => [article]),
+    fetchNews: vi.fn(async (_ticker: string, _from: string, _to: string) => [article]),
     explain: vi.fn(async (): Promise<Explanation> => explanation),
-    ...overrides,
   }
+  return { ...base, ...overrides } as typeof base
 }
 
 describe('runDailyPipeline', () => {
