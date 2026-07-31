@@ -1,0 +1,5 @@
+account,symbol,name,quantity,currency,market_value
+TFSA,SHOP,"Shopify Inc.",40,CAD,4210.80
+TFSA,RY,"Royal Bank of Canada",25,CAD,3820.50
+RRSP,NVDA,"NVIDIA Corporation",12,USD,1502.40
+RRSP,CASH,"Cash",0,CAD,0.00
