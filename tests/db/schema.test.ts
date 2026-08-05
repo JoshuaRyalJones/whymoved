@@ -7,6 +7,13 @@ const sql = readFileSync(
   'utf8',
 )
 
+const rlsSql = readFileSync(
+  fileURLToPath(new URL('../../supabase/migrations/0002_rls_lockdown.sql', import.meta.url)),
+  'utf8',
+)
+
+const allSql = `${sql}\n${rlsSql}`
+
 const EXPECTED_TABLES = [
   'securities',
   'portfolio_sources',
@@ -46,6 +53,22 @@ describe('initial migration', () => {
       'explanation_ratings',
     ]) {
       expect(sql).toContain(`alter table ${table} enable row level security`)
+    }
+  })
+})
+
+describe('rls lockdown migration', () => {
+  // Every table in `public` is reachable through PostgREST with the anon key, so
+  // a table without RLS is world-writable. Leaving explanation_citations open
+  // would let rows be inserted around validateCitations(), which is the one
+  // guarantee this project cannot afford to lose.
+  it.each(EXPECTED_TABLES)('leaves no table in public without RLS: %s', (table) => {
+    expect(allSql).toContain(`alter table ${table} enable row level security`)
+  })
+
+  it('grants no write policy to the reference tables', () => {
+    for (const table of ['securities', 'price_history', 'betas', 'articles']) {
+      expect(rlsSql).not.toContain(`create policy ${table}`)
     }
   })
 })
