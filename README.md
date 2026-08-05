@@ -81,6 +81,8 @@ src/lib/
   data/          tiingo (prices), finnhub (news)
   explain/       prompt, citation validation, Claude call
   pipeline/      nightly orchestration
+  db/            Supabase client, attribution persistence
+  eval/          ratings, measured metrics
 ```
 
 ## Stack
@@ -97,6 +99,14 @@ npm run dev
 ```
 
 The attribution core runs with no API keys at all — `npm test` exercises it against fixtures.
+
+Persistence and the nightly job additionally need a Supabase project:
+
+```bash
+npx supabase link            # once, against your project
+npx supabase db push         # applies supabase/migrations/
+npm run eval                 # measured metrics from the live database
+```
 
 ## What this is not
 
