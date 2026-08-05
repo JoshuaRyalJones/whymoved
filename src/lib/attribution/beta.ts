@@ -1,6 +1,6 @@
 import type { BetaResult } from './types'
 
-const MIN_OBSERVATIONS = 60
+export const MIN_OBSERVATIONS = 60
 
 // A degenerate market series never has *exactly* zero computed variance:
 // summing a constant in floating point leaves residue on the order of 1e-38.

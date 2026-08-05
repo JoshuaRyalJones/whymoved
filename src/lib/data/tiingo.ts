@@ -45,6 +45,30 @@ export async function fetchDailyPrices(
   }))
 }
 
+export interface DatedReturn {
+  date: string
+  value: number
+}
+
+/**
+ * A return spans two closes and is stamped with the LATER date — the session it
+ * was realised on. Callers pair a holding against its benchmark by these dates
+ * rather than by array position: two series can differ in length or skip
+ * different sessions, and positional pairing would silently compare a holding's
+ * move to an unrelated day's market move.
+ */
+export function toDatedReturns(prices: DailyPrice[]): DatedReturn[] {
+  if (prices.length < 2) return []
+  const returns: DatedReturn[] = []
+  for (let i = 1; i < prices.length; i++) {
+    returns.push({
+      date: prices[i].date,
+      value: prices[i].adjClose / prices[i - 1].adjClose - 1,
+    })
+  }
+  return returns
+}
+
 export function toDailyReturns(prices: DailyPrice[]): number[] {
   if (prices.length < 2) return []
   const returns: number[] = []

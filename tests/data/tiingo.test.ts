@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { fetchDailyPrices, toDailyReturns } from '~/lib/data/tiingo'
+import { fetchDailyPrices, toDailyReturns, toDatedReturns } from '~/lib/data/tiingo'
 
 function mockFetch(body: unknown, ok = true, status = 200) {
   return vi.fn().mockResolvedValue({
@@ -69,5 +69,31 @@ describe('toDailyReturns', () => {
 
   it('returns an empty array for fewer than two prices', () => {
     expect(toDailyReturns([{ date: '2026-07-20', close: 100, adjClose: 100 }])).toEqual([])
+  })
+})
+
+describe('toDatedReturns', () => {
+  const prices = [
+    { date: '2026-07-20', close: 100, adjClose: 100 },
+    { date: '2026-07-21', close: 110, adjClose: 110 },
+    { date: '2026-07-22', close: 99, adjClose: 99 },
+  ]
+
+  it('stamps each return with the date it was realised on', () => {
+    // A return spans two closes; it belongs to the later date, which is the day
+    // being classified. Attributing it to the earlier date would shift every
+    // holding one session away from its own benchmark.
+    expect(toDatedReturns(prices)).toEqual([
+      { date: '2026-07-21', value: expect.closeTo(0.1, 10) },
+      { date: '2026-07-22', value: expect.closeTo(-0.1, 10) },
+    ])
+  })
+
+  it('agrees with toDailyReturns on values', () => {
+    expect(toDatedReturns(prices).map((r) => r.value)).toEqual(toDailyReturns(prices))
+  })
+
+  it('returns an empty array for fewer than two prices', () => {
+    expect(toDatedReturns([prices[0]])).toEqual([])
   })
 })

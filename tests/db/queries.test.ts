@@ -24,6 +24,7 @@ const result: DailyResult = {
         residual: 0.05,
       },
       explanation: null,
+      approximate: false,
     },
   ],
 }
@@ -45,6 +46,16 @@ describe('toAttributionRows', () => {
       label: 'idiosyncratic',
       approximate: false,
     })
+  })
+
+  it('persists the approximate flag rather than hardcoding it', () => {
+    // The column exists so a degraded attribution is visible downstream and can
+    // be excluded from eval. Always writing false would hide exactly that.
+    const degraded: DailyResult = {
+      ...result,
+      holdings: [{ ...result.holdings[0], approximate: true }],
+    }
+    expect(toAttributionRows('user-1', degraded)[0].approximate).toBe(true)
   })
 
   it('produces one row per holding', () => {

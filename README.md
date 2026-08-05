@@ -48,6 +48,14 @@ When the model *is* consulted, it receives the residual's size and direction plu
 - **Native-currency returns.** Explanations are about the business, not the exchange rate. FX is reported as its own portfolio-level line.
 - **Same-day trades break the identity.** When quantity changes between snapshots, that day's attribution is marked `approximate` and excluded from eval rather than quietly reported.
 
+### Known limitation: Canadian listings
+
+Tiingo resolves `XIC` to the correct fund (BlackRock iShares Core S&P/TSX Capped Composite) but serves no usable TSX history on the current plan — a handful of stale rows, and every `.TO` symbol 404s. Live attribution is therefore **US-listed only** today.
+
+CAD holdings are not silently wrong as a result. A benchmark that carries no return for the day being classified, or that overlaps too few sessions to estimate beta, marks the holding `approximate`: the arithmetic is still reported and stored, the holding is never sent to the LLM, and eval excludes it. Restoring Canadian coverage is a data-source change, not a code change.
+
+Note that dual-listed names resolve to their US listing — Tiingo returns `SHOP` as NASDAQ and `RY`/`ENB` as NYSE, priced in USD.
+
 ## Measured results
 
 Run `npm run eval` to reproduce these from the live database.

@@ -179,3 +179,81 @@ describe('runDailyPipeline', () => {
     expect(fetched.filter((t) => t === 'XIC')).toHaveLength(1)
   })
 })
+
+describe('runDailyPipeline data-quality guard', () => {
+  // A benchmark that stops updating is the dangerous case: it is non-empty, so
+  // it passes the "no price history" check, but its last return predates the day
+  // being classified. Left unguarded the pipeline pairs a months-old market move
+  // with today's holding move and reports the result as fact.
+  const staleXic = xicPrices.slice(0, 6)
+
+  it('marks a holding approximate when its benchmark has no return for the day', async () => {
+    const deps = makeDeps({
+      fetchPrices: vi.fn(async (t: string) => (t === 'XIC' ? staleXic : (PRICES[t] ?? []))),
+    })
+    const result = await runDailyPipeline(deps)
+    const can = result.holdings.find((h) => h.ticker === 'CAN')!
+    expect(can.approximate).toBe(true)
+  })
+
+  it('never flags an approximate holding, however large its move', async () => {
+    // CAN jumps 40% on the final day. With a healthy benchmark that is plainly
+    // idiosyncratic; with an unusable one we must not pretend to know.
+    const jumped = [...canReturns]
+    jumped[N - 1] = 0.4
+    const deps = makeDeps({
+      fetchPrices: vi.fn(async (t: string) =>
+        t === 'XIC' ? staleXic : t === 'CAN' ? pricesFromReturns(jumped, 130) : (PRICES[t] ?? []),
+      ),
+    })
+    const result = await runDailyPipeline(deps)
+    const can = result.holdings.find((h) => h.ticker === 'CAN')!
+    expect(can.approximate).toBe(true)
+    expect(can.classification.label).not.toBe('idiosyncratic')
+    expect(can.explanation).toBeNull()
+  })
+
+  it('spends no LLM call on an approximate holding', async () => {
+    const jumped = [...canReturns]
+    jumped[N - 1] = 0.4
+    const deps = makeDeps({
+      fetchPrices: vi.fn(async (t: string) =>
+        t === 'XIC' ? staleXic : t === 'CAN' ? pricesFromReturns(jumped, 130) : (PRICES[t] ?? []),
+      ),
+    })
+    await runDailyPipeline(deps)
+    const explained = deps.explain.mock.calls.length
+    expect(explained).toBe(1) // BBB only, never CAN
+    expect(deps.fetchNews.mock.calls.map((c) => c[0])).not.toContain('CAN')
+  })
+
+  it('leaves healthy holdings unmarked', async () => {
+    const result = await runDailyPipeline(makeDeps())
+    expect(result.holdings.every((h) => h.approximate === false)).toBe(true)
+  })
+
+  it('marks approximate when too few observations overlap the benchmark', async () => {
+    // Benchmark covers the classified day but only ~40 sessions of history, short
+    // of the 60 the beta estimate requires.
+    const shortXic = [...xicPrices.slice(0, 1), ...xicPrices.slice(-40)]
+    const deps = makeDeps({
+      fetchPrices: vi.fn(async (t: string) => (t === 'XIC' ? shortXic : (PRICES[t] ?? []))),
+    })
+    const result = await runDailyPipeline(deps)
+    expect(result.holdings.find((h) => h.ticker === 'CAN')!.approximate).toBe(true)
+  })
+
+  it('pairs returns by date, so a gap in the benchmark does not shift the series', async () => {
+    // Drop one interior session from SPY. Under positional pairing every later
+    // day would be compared against the wrong market move, manufacturing a large
+    // residual for a holding that in fact tracks its benchmark.
+    const gapped = [...spyPrices.slice(0, 30), ...spyPrices.slice(31)]
+    const deps = makeDeps({
+      fetchPrices: vi.fn(async (t: string) => (t === 'SPY' ? gapped : (PRICES[t] ?? []))),
+    })
+    const result = await runDailyPipeline(deps)
+    const aaa = result.holdings.find((h) => h.ticker === 'AAA')!
+    expect(aaa.approximate).toBe(false)
+    expect(aaa.classification.label).not.toBe('idiosyncratic')
+  })
+})

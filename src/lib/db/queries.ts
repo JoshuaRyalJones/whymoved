@@ -29,7 +29,7 @@ export function toAttributionRows(userId: string, result: DailyResult): Attribut
     residual: h.classification.residual,
     z_score: h.classification.zScore,
     label: h.classification.label,
-    approximate: false,
+    approximate: h.approximate,
   }))
 }
 
