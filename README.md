@@ -96,11 +96,11 @@ npm test                     # attribution engine test suite
 npm run dev
 ```
 
-The attribution core runs with no API keys at all — `npm test` exercises it against fixtures.
+The attribution core runs with no API keys at all `npm test` exercises it against fixtures.
 
 ## What this is not
 
-Not investment advice. No recommendations, no buy/sell signals, no trade execution. Read-only and explanatory throughout — the app never receives or stores brokerage credentials.
+Not investment advice. No recommendations, no buy/sell signals, no trade execution. Read-only and explanatory throughout the app never receives or stores brokerage credentials.
 
 ## License
 
