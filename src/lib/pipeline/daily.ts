@@ -27,6 +27,21 @@ export interface DailyResult {
   portfolioReturn: number
   holdings: HoldingResult[]
   llmCalls: number
+  /**
+   * Tickers the price source could not serve, or that had too little history to
+   * produce a return. They are excluded from the portfolio figure above, so the
+   * caller needs to know which — a real brokerage portfolio routinely contains
+   * listings a US-only price plan does not carry.
+   */
+  skipped: string[]
+  /**
+   * Holdings that crossed the gate but whose explanation could not be produced —
+   * a news-fetch error, an LLM outage, a rate limit. Their attribution stands and
+   * their classification is unchanged; only the narrative is missing. They are
+   * NOT recorded as `no_driver`, which asserts that news was searched and
+   * explained nothing.
+   */
+  explanationFailures: string[]
 }
 
 export interface DailyPipelineParams {
@@ -66,10 +81,22 @@ export async function runDailyPipeline(params: DailyPipelineParams): Promise<Dai
     )
   }
 
+  // One unpriceable holding must not take the whole portfolio down with it. A
+  // benchmark failure above is different and still propagates: without it,
+  // nothing in that currency can be classified at all.
   const priced: { holding: Holding; prices: DailyPrice[] }[] = []
+  const skipped: string[] = []
   for (const holding of params.holdings) {
-    const prices = await params.fetchPrices(holding.ticker)
+    let prices: DailyPrice[] = []
+    try {
+      prices = await params.fetchPrices(holding.ticker)
+    } catch (error) {
+      console.warn(`Skipping ${holding.ticker}: ${(error as Error).message}`)
+      skipped.push(holding.ticker)
+      continue
+    }
     if (prices.length >= 2) priced.push({ holding, prices })
+    else skipped.push(holding.ticker)
   }
 
   const positions: Position[] = priced.map(({ holding, prices }) => ({
@@ -82,6 +109,7 @@ export async function runDailyPipeline(params: DailyPipelineParams): Promise<Dai
   const contributions = computeContributions(positions)
 
   const results: HoldingResult[] = []
+  const explanationFailures: string[] = []
   let llmCalls = 0
 
   for (let i = 0; i < priced.length; i++) {
@@ -124,19 +152,28 @@ export async function runDailyPipeline(params: DailyPipelineParams): Promise<Dai
 
     let explanation: Explanation | null = null
     if (classification.label === 'idiosyncratic') {
-      const articles = await params.fetchNews(
-        contribution.ticker,
-        daysBefore(params.date, 2),
-        params.date,
-      )
-      explanation = await params.explain({
-        ticker: contribution.ticker,
-        date: params.date,
-        residual: classification.residual,
-        zScore: classification.zScore,
-        articles,
-      })
-      llmCalls++
+      try {
+        const articles = await params.fetchNews(
+          contribution.ticker,
+          daysBefore(params.date, 2),
+          params.date,
+        )
+        explanation = await params.explain({
+          ticker: contribution.ticker,
+          date: params.date,
+          residual: classification.residual,
+          zScore: classification.zScore,
+          articles,
+        })
+        llmCalls++
+      } catch (error) {
+        // The move is still real and still flagged; we just cannot say why yet.
+        // Leaving explanation null keeps that honest and retryable.
+        console.warn(
+          `Explanation failed for ${contribution.ticker}: ${(error as Error).message}`,
+        )
+        explanationFailures.push(contribution.ticker)
+      }
     }
 
     results.push({
@@ -154,5 +191,7 @@ export async function runDailyPipeline(params: DailyPipelineParams): Promise<Dai
     portfolioReturn: portfolioReturn(contributions),
     holdings: results,
     llmCalls,
+    skipped,
+    explanationFailures,
   }
 }

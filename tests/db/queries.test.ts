@@ -6,6 +6,8 @@ const result: DailyResult = {
   date: '2026-07-21',
   portfolioReturn: 0.012,
   llmCalls: 1,
+  skipped: [],
+  explanationFailures: [],
   holdings: [
     {
       ticker: 'BBB',

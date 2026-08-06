@@ -257,3 +257,109 @@ describe('runDailyPipeline data-quality guard', () => {
     expect(aaa.classification.label).not.toBe('idiosyncratic')
   })
 })
+
+describe('runDailyPipeline resilience to unfetchable tickers', () => {
+  // A real brokerage portfolio contains listings the price source does not
+  // carry -- TSX symbols on a US-only plan, for instance. fetchDailyPrices
+  // throws on a 404, and one such holding must not abort the whole portfolio.
+  const throwingFetch = (bad: string) =>
+    vi.fn(async (ticker: string) => {
+      if (ticker === bad) throw new Error(`Tiingo request failed for ${bad}: 404`)
+      return PRICES[ticker] ?? []
+    })
+
+  it('completes the run when one holding cannot be priced', async () => {
+    const result = await runDailyPipeline(makeDeps({ fetchPrices: throwingFetch('CAN') }))
+    expect(result.holdings.map((h) => h.ticker)).toEqual(['AAA', 'BBB'])
+  })
+
+  it('names the skipped holdings rather than dropping them silently', async () => {
+    const result = await runDailyPipeline(makeDeps({ fetchPrices: throwingFetch('CAN') }))
+    expect(result.skipped).toEqual(['CAN'])
+  })
+
+  it('reports holdings skipped for thin history too', async () => {
+    const deps = makeDeps({
+      fetchPrices: vi.fn(async (t: string) => (t === 'BBB' ? [] : (PRICES[t] ?? []))),
+    })
+    const result = await runDailyPipeline(deps)
+    expect(result.skipped).toEqual(['BBB'])
+  })
+
+  it('leaves skipped empty on a healthy run', async () => {
+    const result = await runDailyPipeline(makeDeps())
+    expect(result.skipped).toEqual([])
+  })
+
+  it('still classifies the remaining holdings correctly', async () => {
+    const result = await runDailyPipeline(makeDeps({ fetchPrices: throwingFetch('CAN') }))
+    const bbb = result.holdings.find((h) => h.ticker === 'BBB')!
+    expect(bbb.classification.label).toBe('idiosyncratic')
+  })
+
+  it('propagates a benchmark failure, which is not recoverable', async () => {
+    // A holding we cannot price is survivable; a benchmark we cannot price means
+    // nothing in that currency can be classified at all.
+    const deps = makeDeps({ fetchPrices: throwingFetch('SPY') })
+    await expect(runDailyPipeline(deps)).rejects.toThrow('Tiingo request failed for SPY')
+  })
+})
+
+describe('runDailyPipeline resilience to explanation failures', () => {
+  // The arithmetic is the product; the explanation is a gated enrichment on top
+  // of it. An LLM outage, a rate limit, or an empty credit balance must never
+  // destroy a day's attribution or masquerade as a finding about the market.
+  const boom = () => {
+    throw new Error('402 credit balance too low')
+  }
+
+  it('keeps the attribution when the explanation call fails', async () => {
+    const deps = makeDeps({ explain: vi.fn(async () => boom()) })
+    const result = await runDailyPipeline(deps)
+    expect(result.holdings.map((h) => h.ticker)).toEqual(['AAA', 'BBB', 'CAN'])
+    expect(result.portfolioReturn).toBeCloseTo(
+      result.holdings.reduce((s, h) => s + h.contribution.contributionReturn, 0),
+      10,
+    )
+  })
+
+  it('leaves the flagged holding classified but unexplained', async () => {
+    const deps = makeDeps({ explain: vi.fn(async () => boom()) })
+    const result = await runDailyPipeline(deps)
+    const bbb = result.holdings.find((h) => h.ticker === 'BBB')!
+    expect(bbb.classification.label).toBe('idiosyncratic')
+    expect(bbb.explanation).toBeNull()
+  })
+
+  it('never records an outage as a no_driver verdict', async () => {
+    // no_driver is a claim that the news was searched and nothing explained the
+    // move. An API failure searched nothing and must not borrow that meaning.
+    const deps = makeDeps({ explain: vi.fn(async () => boom()) })
+    const result = await runDailyPipeline(deps)
+    const verdicts = result.holdings.map((h) => h.explanation?.verdict)
+    expect(verdicts).not.toContain('no_driver')
+  })
+
+  it('names the holdings whose explanation failed', async () => {
+    const deps = makeDeps({ explain: vi.fn(async () => boom()) })
+    const result = await runDailyPipeline(deps)
+    expect(result.explanationFailures).toEqual(['BBB'])
+  })
+
+  it('survives a news fetch failure the same way', async () => {
+    const deps = makeDeps({
+      fetchNews: vi.fn(async () => {
+        throw new Error('Finnhub request failed for BBB: 429')
+      }),
+    })
+    const result = await runDailyPipeline(deps)
+    expect(result.holdings).toHaveLength(3)
+    expect(result.explanationFailures).toEqual(['BBB'])
+    expect(result.holdings.find((h) => h.ticker === 'BBB')!.explanation).toBeNull()
+  })
+
+  it('leaves explanationFailures empty on a healthy run', async () => {
+    const result = await runDailyPipeline(makeDeps())
+    expect(result.explanationFailures).toEqual([])
+  })
+})
