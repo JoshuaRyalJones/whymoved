@@ -1,6 +1,6 @@
 # whymoved
 
-Explains why a stock portfolio moved on a given day — and, more importantly, admits when there is no explanation.
+Explains why a stock portfolio moved on a given day and, more importantly, admits when there is no explanation.
 
 > **Status:** in active development. The attribution engine is being built first; the metrics table below stays unpopulated until the pipeline has run for real. No numbers in this README are invented.
 
@@ -33,20 +33,20 @@ On a normal day, most holdings never reach a model at all. The statistical gate 
 
 ### The citation guarantee
 
-When the model *is* consulted, it receives the residual's size and direction plus a capped set of ticker-tagged news articles, each with a locally assigned ID (`a1`, `a2`, …). It must cite those IDs.
+When the model *is* consulted, it receives the residual's size and direction plus a capped set of tickertagged news articles, each with a locally assigned ID (`a1`, `a2`, …). It must cite those IDs.
 
-**Every citation is verified against the retrieved set in code before it can be displayed.** Not by prompting — by a set-membership check. A fabricated citation triggers one retry, then falls back to *"no identifiable driver."*
+**Every citation is verified against the retrieved set in code before it can be displayed.** Not by prompting — by a setmembership check. A fabricated citation triggers one retry, then falls back to *"no identifiable driver."*
 
 `no_driver` is a success case, not a failure. A tool that manufactures a story every day is worse than no tool.
 
 ### Design decisions worth naming
 
-- **Prior-day weights.** Contributions use `V_i(t-1) × r_i(t)`, so per-holding dollar contributions sum *exactly* to portfolio P&L. No plug figure.
+ **Prior day weights.** Contributions use `V_i(t-1) × r_i(t)`, so per holding dollar contributions sum *exactly* to portfolio P&L. No plug figure.
 - **Beta excludes the day being classified.** Including it would let an unusual move inflate the baseline it is measured against.
-- **Per-currency benchmarks.** CAD holdings against XIC (S&P/TSX Composite), USD against SPY. Benchmarking a Canadian bank against the S&P 500 produces a residual that is mostly just Canada.
-- **Thin history is not confidence.** Fewer than 60 observations → `β = 1`, flagged low-confidence, and *never* eligible for an LLM call.
-- **Native-currency returns.** Explanations are about the business, not the exchange rate. FX is reported as its own portfolio-level line.
-- **Same-day trades break the identity.** When quantity changes between snapshots, that day's attribution is marked `approximate` and excluded from eval rather than quietly reported.
+- **Per currency benchmarks.** CAD holdings against XIC (S&P/TSX Composite), USD against SPY. Benchmarking a Canadian bank against the S&P 500 produces a residual that is mostly just Canada.
+- **Thin history is not confidence.** Fewer than 60 observations → `β = 1`, flagged low confidence, and *never* eligible for an LLM call.
+- **Native currency returns.** Explanations are about the business, not the exchange rate. FX is reported as its own portfolio-level line.
+- **Same day trades break the identity.** When quantity changes between snapshots, that day's attribution is marked `approximate` and excluded from eval rather than quietly reported.
 
 ### Known limitation: Canadian listings
 
@@ -62,11 +62,11 @@ Run `npm run eval` to reproduce these from the live database.
 
 | Metric | Value |
 |---|---|
-| Total holding-days analyzed | _not yet measured_ |
+| Total holding days analyzed | _not yet measured_ |
 | Flagged as idiosyncratic | _not yet measured_ |
 | Returned "no driver" | _not yet measured_ |
 | Citation validity | _not yet measured_ |
-| Human-rated accuracy (n ≥ 50) | _not yet measured_ |
+| Human rated accuracy (n ≥ 50) | _not yet measured_ |
 
 Every explanation is stored and rated `correct` / `plausible_unverified` / `wrong`. Publishing measured accuracy rather than claimed accuracy is the point of the project, so this table stays empty until the numbers are real.
 
@@ -84,7 +84,7 @@ All monetary and return math lives in pure functions under `src/lib/attribution/
 
 ```
 src/lib/
-  attribution/   returns, beta, classification, benchmarks   (pure, unit-tested)
+  attribution/   returns, beta, classification, benchmarks   (pure, unit tested)
   sources/       manual, csv, snaptrade, demo
   data/          tiingo (prices), finnhub (news)
   explain/       prompt, citation validation, Claude call
@@ -106,7 +106,7 @@ npm test                     # attribution engine test suite
 npm run dev
 ```
 
-The attribution core runs with no API keys at all — `npm test` exercises it against fixtures.
+The attribution core runs with no API keys at all `npm test` exercises it against fixtures.
 
 Persistence and the nightly job additionally need a Supabase project:
 
@@ -118,7 +118,7 @@ npm run eval                 # measured metrics from the live database
 
 ## What this is not
 
-Not investment advice. No recommendations, no buy/sell signals, no trade execution. Read-only and explanatory throughout — the app never receives or stores brokerage credentials.
+Not investment advice. No recommendations, no buy/sell signals, no trade execution. Read-only and explanatory throughout the app never receives or stores brokerage credentials.
 
 ## License
 
